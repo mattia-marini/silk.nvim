@@ -1,4 +1,5 @@
 local M = {}
+local util = require("silk.appearance.theme_generator.util")
 
 -- Define mapping of Fish variables to Neovim highlight groups
 local fish_to_nvim = {
@@ -122,78 +123,29 @@ end
 
 --- Generates a Fish theme for current colorscheme and writes it to the fish configuration directory.
 --- Prompts the user for further infos if necessary
-function M.prompt_theme_generation(name)
-  if name then
-    M.generate_and_write_theme(name)
-  else
-    if not vim.g.colors_name then
-      local rv = vim.fn.inputlist({
-        "Could not get current colorscheme name. What do you wanna do: ",
-        "1. Enter a name",
-        "2. Use 'unknown'",
-        "3. Abort",
-      })
+function M.prompt_theme_generation()
+  util.prompt_current_theme_name(
+    function(colorscheme_name)
+      local theme_dir = util.get_theme_directory("fish")
+      if theme_dir then
+        local fish_theme = M.generate_theme()
 
-      -- enter name
-      if rv == 1 then
-        vim.ui.input({
-            prompt = "Please insert a name for the theme: ",
-          },
-          function(input)
-            print("\n")
-            M.generate_and_write_theme(input)
-          end
-        )
+        -- Theme metadata
+        table.insert(fish_theme, 1, "# name: '" .. colorscheme_name .. "'")
+        local main_hi_group = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
+        if main_hi_group then
+          table.insert(fish_theme, 2, "# preferred_background: " .. string.format("%06X", main_hi_group))
+        end
+        table.insert(fish_theme, 3, "")
 
-        -- use unknown
-      elseif rv == 2 then
-        M.generate_and_write_theme("unknown")
 
-        -- abort
-      elseif rv == 3 then
-        return
+        local output_path = vim.fs.joinpath(theme_dir, colorscheme_name .. ".theme")
+        util.write_table_to_fs(output_path, fish_theme)
+      else
+        vim.notify("Could not get theme directory for Fish", vim.log.levels.ERROR)
       end
-    else
-      M.generate_and_write_theme(vim.g.colors_name)
     end
-  end
-end
-
---- Generates a Fish theme for current colorscheme and writes it to the fish configuration directory
-function M.generate_and_write_theme(colorscheme_name)
-  local fish_theme = M.generate_theme()
-
-  table.insert(fish_theme, 1, "# name: '" .. colorscheme_name .. "'")
-  local main_hi_group = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
-  if main_hi_group then
-    table.insert(fish_theme, 2, "# preferred_background: " .. string.format("%06X", main_hi_group))
-  end
-  table.insert(fish_theme, 3, "")
-
-  local job = vim.system({ 'fish', '-c', 'echo $__fish_config_dir' }, { text = true }):wait()
-  if not (job.code == 0 and #job.stdout > 0) then
-    vim.notify("Could not get $__fish_config_dir", vim.log.levels.ERROR)
-    return
-  end
-
-  local fish_config_dir = job.stdout:gsub("\n", "") -- Remove trailing newline
-
-  -- Open output file for writing
-  local output_path = vim.fs.joinpath(fish_config_dir, "themes", colorscheme_name .. ".theme")
-  vim.notify("Writing file to " .. output_path, vim.log.levels.INFO)
-
-  local file = io.open(output_path, "w")
-  if not file then
-    vim.notify("Could not open " .. output_path, vim.log.levels.ERROR)
-    return
-  end
-
-  for _, line in ipairs(fish_theme) do
-    file:write(line .. "\n")
-  end
-
-  file:close()
-  vim.notify("Fish color export written to " .. output_path)
+  )
 end
 
 return M
