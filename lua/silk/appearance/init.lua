@@ -1,1 +1,3 @@
-require("silk.appearance.theme_generator")
+return {
+  theme_generator = require("silk.appearance.theme_generator")
+}

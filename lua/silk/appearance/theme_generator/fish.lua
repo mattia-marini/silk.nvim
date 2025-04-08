@@ -1,3 +1,5 @@
+local M = {}
+
 -- Define mapping of Fish variables to Neovim highlight groups
 local fish_to_nvim = {
   fish_color_autosuggestion = { hi_group = "Comment" },
@@ -14,7 +16,7 @@ local fish_to_nvim = {
   fish_color_host_remote = { hi_group = "Identifier" },
   fish_color_keyword = { hi_group = "Keyword" },
   fish_color_match = { hi_group = "IncSearch" },
-  fish_color_normal = { hi_group = "Normal", attr = { "fg" } },
+  fish_color_normal = { hi_group = "Normal", attr = { fg = true } },
   fish_color_operator = { hi_group = "Operator" },
   fish_color_option = { hi_group = "Type" },
   fish_color_param = { hi_group = "Identifier" },
@@ -35,7 +37,7 @@ local fish_to_nvim = {
   },
   --
   fish_pager_color_background = { hi_group = "Pmenu", attr = {} },
-  fish_pager_color_selected_background = { hi_group = "PmenuSel", attr = { "bg" } },
+  fish_pager_color_selected_background = { hi_group = "PmenuSel", attr = { bg = true } },
   fish_pager_color_secondary_background = {
     hi_group = "Pmenu",
     attr = {},
@@ -60,15 +62,17 @@ local fish_to_nvim = {
   fish_pager_color_progress = { hi_group = "StatusLine", attr = { fg = true } },
 }
 
+--- Gets the hex color value from a highlight group
 local function format_color(color)
   return string.format("%06x", color)
 end
 
+--- Trims leading and trailing whitespace from a string
 local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
--- Function to convert Neovim highlight attributes to Fish-style options
+--- Function to convert Neovim highlight attributes to Fish-style options
 local function format_attrs(hi_group, attr)
   local style = {}
 
@@ -83,7 +87,8 @@ local function format_attrs(hi_group, attr)
   return table.concat(style, " ")
 end
 
-function generate_theme()
+--- Returns a table containing the Fish theme lines. Each corresponds to a variable
+function M.generate_theme()
   local rv = {}
   for fish_var, format in pairs(fish_to_nvim) do
     local hi_group = vim.api.nvim_get_hl(0, { name = format.hi_group, create = false })
@@ -115,22 +120,66 @@ function generate_theme()
   return rv
 end
 
-function generate_and_write_theme()
-  local rv = generate_theme()
-  table.insert(rv, 1, "# name: '" .. vim.g.colors_name .. "'")
-  table.insert(rv, 2,
-    "# preferred_background: " .. string.format("%06X", vim.api.nvim_get_hl(0, { name = "Normal" }).bg))
-  table.insert(rv, 3, "")
+--- Generates a Fish theme for current colorscheme and writes it to the fish configuration directory.
+--- Prompts the user for further infos if necessary
+function M.prompt_theme_generation(name)
+  if name then
+    M.generate_and_write_theme(name)
+  else
+    if not vim.g.colors_name then
+      local rv = vim.fn.inputlist({
+        "Could not get current colorscheme name. What do you wanna do: ",
+        "1. Enter a name",
+        "2. Use 'unknown'",
+        "3. Abort",
+      })
+
+      -- enter name
+      if rv == 1 then
+        vim.ui.input({
+            prompt = "Please insert a name for the theme: ",
+          },
+          function(input)
+            print("\n")
+            M.generate_and_write_theme(input)
+          end
+        )
+
+        -- use unknown
+      elseif rv == 2 then
+        M.generate_and_write_theme("unknown")
+
+        -- abort
+      elseif rv == 3 then
+        return
+      end
+    else
+      M.generate_and_write_theme(vim.g.colors_name)
+    end
+  end
+end
+
+--- Generates a Fish theme for current colorscheme and writes it to the fish configuration directory
+function M.generate_and_write_theme(colorscheme_name)
+  local fish_theme = M.generate_theme()
+
+  table.insert(fish_theme, 1, "# name: '" .. colorscheme_name .. "'")
+  local main_hi_group = vim.api.nvim_get_hl(0, { name = "Normal" }).bg
+  if main_hi_group then
+    table.insert(fish_theme, 2, "# preferred_background: " .. string.format("%06X", main_hi_group))
+  end
+  table.insert(fish_theme, 3, "")
 
   local job = vim.system({ 'fish', '-c', 'echo $__fish_config_dir' }, { text = true }):wait()
   if not (job.code == 0 and #job.stdout > 0) then
     vim.notify("Could not get $__fish_config_dir", vim.log.levels.ERROR)
     return
   end
+
   local fish_config_dir = job.stdout:gsub("\n", "") -- Remove trailing newline
 
   -- Open output file for writing
-  local output_path = vim.fs.joinpath(fish_config_dir, "themes", vim.g.colors_name .. ".theme")
+  local output_path = vim.fs.joinpath(fish_config_dir, "themes", colorscheme_name .. ".theme")
   vim.notify("Writing file to " .. output_path, vim.log.levels.INFO)
 
   local file = io.open(output_path, "w")
@@ -139,7 +188,7 @@ function generate_and_write_theme()
     return
   end
 
-  for _, line in ipairs(rv) do
+  for _, line in ipairs(fish_theme) do
     file:write(line .. "\n")
   end
 
@@ -147,22 +196,4 @@ function generate_and_write_theme()
   vim.notify("Fish color export written to " .. output_path)
 end
 
--- -- Get $__fish_config_dir from the environment
--- local fish_config_dir = os.getenv("__fish_config_dir")
--- if not fish_config_dir then
---   vim.notify("$__fish_config_dir is not set", vim.log.levels.WARN)
---   return
--- end
---
--- -- Open output file for writing
--- local output_path = fish_config_dir .. "/nvim_colors.fish"
--- local file = io.open(output_path, "w")
--- if not file then
---   vim.notify("Could not open " .. output_path, vim.log.levels.ERROR)
---   return
--- end
-
-
-
--- file:close()
--- vim.notify("Fish color export written to " .. output_path)
+return M

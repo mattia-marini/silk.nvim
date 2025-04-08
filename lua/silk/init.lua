@@ -1,2 +1,3 @@
-print("Hello from silk")
-require("silk.appearance")
+return {
+  appearance = require("silk.appearance")
+}
