@@ -36,7 +36,10 @@ function M.go_to_window(direction)
         "--no-response"
       }, {},
       function(obj)
-        print(vim.inspect(obj))
+        if obj.code ~= 0 then
+          vim.notify.error("Failed to focus window: " .. obj.stderr)
+          return
+        end
       end
     )
   end
