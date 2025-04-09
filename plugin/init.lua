@@ -7,3 +7,14 @@ end, {
   end,
   nargs = 1,
 })
+
+
+vim.api.nvim_create_user_command("SilkGo", function(args)
+  require("silk.interaction.window").go_to_window(args.args)
+end, {
+  complete = function(arglead, cmdargs)
+    return { "left", "right", "up", "down" }
+  end,
+  nargs = 1,
+}
+)

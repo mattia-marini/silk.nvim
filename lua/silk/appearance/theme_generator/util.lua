@@ -15,7 +15,7 @@ function M.write_table_to_fs(path, table)
   end
 
   file:close()
-  vim.notify("Fish color export written to " .. path)
+  vim.notify("Theme written to " .. path)
 end
 
 function M.prompt_current_theme_name(on_confirm)
@@ -25,7 +25,11 @@ function M.prompt_current_theme_name(on_confirm)
     },
     function(input)
       print("\n")
-      on_confirm(input)
+      if input == nil or input == "" then
+        M.prompt_current_theme_name(on_confirm)
+      else
+        on_confirm(input)
+      end
     end
   )
 end
@@ -44,7 +48,7 @@ function M.get_theme_directory(tool)
     if os.getenv("KITTY_CONFIG_DIRECTORY") then
       return os.getenv("KITTY_CONFIG_DIRECTORY")
     elseif os.getenv("XDG_CONFIG_HOME") then
-      return os.getenv("XDG_CONFIG_HOME") .. "/kitty"
+      return vim.fs.joinpath(os.getenv("XDG_CONFIG_HOME"), "kitty", "themes")
     else
       return vim.fn.expand("~/.config/kitty/themes")
     end
