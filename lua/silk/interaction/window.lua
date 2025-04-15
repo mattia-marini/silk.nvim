@@ -6,10 +6,10 @@ function M.go_to_window(direction)
   local nvim_direction
   local kitty_direction
   if direction == "left" then
-    nvim_direction = "l"
+    nvim_direction = "h"
     kitty_direction = "left"
   elseif direction == "right" then
-    nvim_direction = "h"
+    nvim_direction = "l"
     kitty_direction = "right"
   elseif direction == "up" then
     nvim_direction = "k"
