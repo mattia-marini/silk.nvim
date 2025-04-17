@@ -72,7 +72,7 @@ function M.prompt_theme_generation()
   end
 
   silk_util.prompt_current_theme_name(function(theme_name)
-    local theme_directory = silk_util.get_theme_directory("kitty")
+    local theme_directory = silk_util.get_config_location("kitty")
     if theme_directory then
       silk_util.write_table_to_fs(vim.fs.joinpath(theme_directory, theme_name .. ".conf"), theme)
     end

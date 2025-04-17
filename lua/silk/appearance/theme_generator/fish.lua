@@ -126,7 +126,7 @@ end
 function M.prompt_theme_generation()
   util.prompt_current_theme_name(
     function(colorscheme_name)
-      local theme_dir = util.get_theme_directory("fish")
+      local theme_dir = util.get_config_location("fish")
       if theme_dir then
         local fish_theme = M.generate_theme()
 

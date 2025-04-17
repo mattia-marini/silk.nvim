@@ -18,6 +18,27 @@ function M.write_table_to_fs(path, table)
   vim.notify("Theme written to " .. path)
 end
 
+-- Reads a file and inserts the content of the table inside the
+-- separator delimiter
+function M.insert_table_content_in_file(path, table, separator)
+  -- Open output file for writing
+
+  vim.system()
+  local file = io.open(path, "r")
+  if not file then
+    vim.notify("Could not open " .. path, vim.log.levels.ERROR)
+    return
+  end
+
+  vim.notify("Writing file to " .. path, vim.log.levels.INFO)
+  for _, line in ipairs(table) do
+    file:write(line .. "\n")
+  end
+
+  file:close()
+  vim.notify("Theme written to " .. path)
+end
+
 function M.prompt_current_theme_name(on_confirm)
   vim.ui.input({
       prompt = "Please insert a name for the theme: ",
@@ -34,7 +55,9 @@ function M.prompt_current_theme_name(on_confirm)
   )
 end
 
-function M.get_theme_directory(tool)
+-- Returns either the config directory or the config file
+function M.get_config_location(tool)
+  -- Fish config directory
   if tool == "fish" then
     local job = vim.system({ 'fish', '-c', 'echo $__fish_config_dir' }, { text = true }):wait()
 
@@ -44,6 +67,8 @@ function M.get_theme_directory(tool)
     else
       return vim.fs.joinpath(job.stdout:gsub("\n", ""), "themes")
     end
+
+    -- Kitty config directory
   elseif tool == "kitty" then
     if os.getenv("KITTY_CONFIG_DIRECTORY") then
       return os.getenv("KITTY_CONFIG_DIRECTORY")
@@ -51,6 +76,14 @@ function M.get_theme_directory(tool)
       return vim.fs.joinpath(os.getenv("XDG_CONFIG_HOME"), "kitty", "themes")
     else
       return vim.fn.expand("~/.config/kitty/themes")
+    end
+
+    -- Starship config file
+  elseif tool == "starship" then
+    if os.getenv("$STARSHIP_CONFIG") then
+      return os.getenv("$STARSHIP_CONFIG")
+    else
+      return vim.fn.expand("~/.config/starship.toml")
     end
   end
 end
