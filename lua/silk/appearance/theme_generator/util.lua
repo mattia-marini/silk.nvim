@@ -55,4 +55,51 @@ function M.get_theme_directory(tool)
   end
 end
 
+function M.ordered_pairs(t)
+  local current_index = 0
+  local function iter(t)
+    current_index = current_index + 1
+    local key = t[current_index]
+    if key then
+      return key, t[key]
+    end
+  end
+  return iter, t
+end
+
+function M.ordered_table(t)
+  local current_index = 1
+  local metatable = {}
+  function metatable:__newindex(key, value)
+    rawset(self, key, value)
+    rawset(self, current_index, key)
+    current_index = current_index + 1
+  end
+
+  return setmetatable(t or {}, metatable)
+end
+
+function M.alter(attr, percent)
+  return math.floor(attr * (100 + percent) / 100)
+end
+
+function M.shade_color(color, percent)
+  local r, g, b = hex_to_rgb(color)
+  if not r or not g or not b then
+    return "NONE"
+  end
+  r, g, b = alter(r, percent), alter(g, percent), alter(b, percent)
+  r, g, b = math.min(r, 255), math.min(g, 255), math.min(b, 255)
+  return string.format("#%02x%02x%02x", r, g, b)
+end
+
+function M.is_light()
+  return vim.opt.background:get() == "light"
+end
+
+function M.hex_to_rgb(color)
+  local hex = color:gsub("#", "")
+  return tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5), 16)
+end
+
 return M
